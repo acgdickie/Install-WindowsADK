@@ -6,6 +6,27 @@ A PowerShell script that downloads and installs the **Windows Assessment and Dep
 - **winget mode** (`-UseWinget`): the script installs the ADK with winget. **It does not work today (October 2026).** See [winget mode](#winget-mode).
 - **Restarts:** the Microsoft installer never restarts Windows. The script restarts Windows after 60 seconds, but only if the install needs it. Add `-SuppressReboot` to never restart. Add `-ForceReboot` to always restart.
 
+## Why this script exists
+
+This script was made in response to [Veeam KB4885](https://www.veeam.com/kb4885): *Windows 11 24H2/25H2 | Server 2025 - Recovery Media Restore Fails with: The Local Security Authority cannot be contacted*.
+
+- **The problem:** Veeam Agent for Microsoft Windows builds its Recovery Media (ISO or USB) from the Windows Recovery Environment (WinRE). After Microsoft's June 2026 security update, restores from that media fail with "The Local Security Authority cannot be contacted."
+- **Microsoft's fix:** the September 8, 2026 security updates (KB5124008 for Windows 11 24H2/25H2, KB5122871 for Windows Server 2025). Install the update, then create the Recovery Media again.
+- **Veeam's workaround:** build the Recovery Media with the Windows ADK and its matching Windows PE add-on instead of WinRE. This script installs both.
+
+To use the workaround:
+
+1. Install the ADK and the WinPE add-on with this script (see the [Quick start](#quick-start)). Use `-IncludeWinPE`.
+2. Tell Veeam Agent to build the Recovery Media with the ADK. This command is from KB4885:
+
+   ```powershell
+   New-ItemProperty -Path "HKLM:\SOFTWARE\Veeam\Veeam Endpoint Backup" -Name "ForceUseAdkForRecoveryMedia" -PropertyType DWORD -Value 1 -Force
+   ```
+
+3. Create the Veeam Recovery Media again. Media made before the change stays affected.
+
+Always check [KB4885](https://www.veeam.com/kb4885) for Veeam's latest steps.
+
 ## Quick start
 
 Open PowerShell **as Administrator**. Then run these steps in the same window.
@@ -21,6 +42,8 @@ Open PowerShell **as Administrator**. Then run these steps in the same window.
 ```powershell
 Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/acgdickie/Install-WindowsADK/main/Install-WindowsADK.ps1' -OutFile "$env:TEMP\Install-WindowsADK.ps1" -UseBasicParsing
 ```
+
+This gets the newest version. To get a fixed release instead, use the link from the [Releases](https://github.com/acgdickie/Install-WindowsADK/releases) page, for example `https://github.com/acgdickie/Install-WindowsADK/releases/download/v1.0/Install-WindowsADK.ps1`.
 
 **3. Dry run (changes nothing).** `-WhatIf` shows what the script would do, then stops. It downloads nothing, installs nothing and never restarts. So it cannot tell if the installed ADK is already up to date.
 

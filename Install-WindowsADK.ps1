@@ -88,6 +88,11 @@
     Shows what would happen, without changing anything.
 
 .NOTES
+    Made in response to Veeam KB4885 (https://www.veeam.com/kb4885): Veeam Recovery Media built from
+    WinRE fails to restore after Microsoft's June 2026 update. Veeam's workaround is to build the media
+    with the Windows ADK and the WinPE add-on, which this script installs (use -IncludeWinPE).
+    Project page: https://github.com/acgdickie/Install-WindowsADK
+
     Run as Administrator. Works in Windows PowerShell 5.1 and PowerShell 7.
     From another program (for example Intune), start it with -File so the exit code is kept:
       powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-WindowsADK.ps1
