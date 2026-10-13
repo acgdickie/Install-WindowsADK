@@ -8,31 +8,54 @@ A PowerShell script that downloads and installs the **Windows Assessment and Dep
 
 ## Quick start
 
-1. Open PowerShell **as Administrator**.
-2. Go to the folder that holds the script.
-3. Allow scripts in this PowerShell window only:
+Open PowerShell **as Administrator**. Then run these steps in the same window.
 
-   ```powershell
-   Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
-   ```
+**1. Turn on TLS 1.2 (for this window only).** Windows PowerShell 5.1 on some Windows versions still uses an old protocol that GitHub refuses. Without this line, the download can fail with `The underlying connection was closed: An unexpected error occurred on a send.`
 
-4. Run:
+```powershell
+[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+```
 
-   ```powershell
-   .\Install-WindowsADK.ps1 -IncludeWinPE
-   ```
+**2. Download the script.** This saves it in your TEMP folder. You can use another folder, for example `C:\Temp\Install-WindowsADK.ps1`. Then use the same path in the next steps.
 
-This installs the current ADK and the matching WinPE add-on.
+```powershell
+Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/acgdickie/Install-WindowsADK/main/Install-WindowsADK.ps1' -OutFile "$env:TEMP\Install-WindowsADK.ps1" -UseBasicParsing
+```
 
-> **Warning:** If the install needs a restart, Windows restarts after 60 seconds. Open programs close, and unsaved work is lost. To stop this, add `-SuppressReboot`. To cancel a countdown, run `shutdown /a`.
+**3. Dry run (changes nothing).** `-WhatIf` shows what the script would do, then stops. It downloads nothing, installs nothing and never restarts. So it cannot tell if the installed ADK is already up to date.
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:TEMP\Install-WindowsADK.ps1" -IncludeWinPE -WhatIf
+```
+
+You should see lines that start with `What if:`, then `What if: nothing was changed.`
+
+**4. Install, and never restart.** This installs the current ADK and the matching WinPE add-on. `-SuppressReboot` makes sure Windows does not restart, even if the install needs it.
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:TEMP\Install-WindowsADK.ps1" -IncludeWinPE -SuppressReboot
+```
 
 The installers download about 2.5 GB. The script shows no progress while they work. This can take 5 to 15 minutes. Do not stop it.
 
-To see what the script would do, add `-WhatIf`. It changes nothing and downloads nothing. So it cannot tell if the installed ADK is already up to date.
+**5. Check the result.**
 
 ```powershell
-.\Install-WindowsADK.ps1 -IncludeWinPE -WhatIf
+$LASTEXITCODE
 ```
+
+| Result | Meaning |
+|---|---|
+| `0` | Done. No restart is needed. |
+| `3010` | Done. Restart Windows when it suits you. |
+| Any other number | It failed. The message on screen says why and where the log is. See [Troubleshooting](#troubleshooting). |
+
+Notes:
+
+- If you do not need the WinPE add-on, leave out `-IncludeWinPE`.
+- `-ExecutionPolicy Bypass` lets the script run even when PowerShell blocks scripts. It applies to this one run only.
+- If you leave out `-SuppressReboot`, Windows restarts after 60 seconds when the install needs a restart. Open programs close, and unsaved work is lost. To cancel the countdown, run `shutdown /a`.
+- If you already have the script in a folder, you can also run it from there: `.\Install-WindowsADK.ps1 -IncludeWinPE -SuppressReboot`
 
 ## Requirements
 
@@ -274,7 +297,8 @@ Each run makes a new folder in the TEMP folder of the account that runs the scri
 
 | Message or code | What to do |
 |---|---|
-| `running scripts is disabled on this system` or `is not digitally signed` | Do step 3 of the [Quick start](#quick-start). Or start the script with `powershell.exe -ExecutionPolicy Bypass -File .\Install-WindowsADK.ps1`. |
+| `The underlying connection was closed: An unexpected error occurred on a send.` (when you download the script) | Turn on TLS 1.2 first. See step 1 of the [Quick start](#quick-start). The script turns on TLS 1.2 by itself for its own downloads. |
+| `running scripts is disabled on this system` or `is not digitally signed` | Start the script with `powershell.exe -NoProfile -ExecutionPolicy Bypass -File <path to the script>`, as in the [Quick start](#quick-start). |
 | `Run this script as Administrator.` | Open PowerShell with "Run as administrator". |
 | 1618 | Another setup is running. Wait for it to finish, then try again. |
 | 2007 | A restart from an earlier ADK install is still pending. Restart Windows, then try again. |
@@ -308,3 +332,10 @@ The tests load the script's functions with `$env:INSTALL_WINDOWSADK_FUNCTIONS_ON
 | `Install-WindowsADK.ps1` | The install script. |
 | `Install-WindowsADK.Tests.ps1` | Unit tests (Pester). |
 | `README.md` | This file. |
+| `LICENSE` | MIT license. |
+
+## License
+
+MIT. You can use, change and share this script, also for work. See [LICENSE](LICENSE).
+
+The Windows ADK itself is Microsoft software. Its own Microsoft license applies when you install it.
